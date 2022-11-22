@@ -1,0 +1,1 @@
+console.log("Nginx docker image.")

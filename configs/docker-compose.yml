@@ -1,0 +1,97 @@
+version: '3.7'
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:6.1.1
+    environment:
+      ZOOKEEPER_CLIENT_PORT: "2181"
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-log:/var/lib/zookeeper/log
+  kafka1:
+    image: confluentinc/cp-kafka:6.1.1
+    depends_on:
+      - zookeeper
+    environment:
+      # KAFKA_ADVERTISED_HOST_NAME: kafka1
+      # KAFKA_LISTENERS: PLAINTEXT://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka1:9092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      #KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      #KAFKA_DELETE_TOPIC_ENABLE: 'true'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    restart: always
+  app1:
+    build: ../app/
+    ports:
+      - "3001:3000"
+    volumes:
+      - ../app:/app
+      # - /app/node_modules
+    restart: always
+  auth1:
+    build: ../auth/
+    ports:
+      - "3002:3001"
+    volumes:
+      - ../auth:/auth
+      # - /auth/node_modules
+    restart: always
+  proxy:
+    build: ../proxy
+    ports:
+      - "3003:3002"
+    volumes:
+      - ../proxy:/proxy
+      - /proxy/node_modules 
+    restart: always
+  db:
+    image: postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - /home/annahayriyan/db:/var/lib/postgresql
+    environment:
+      - POSTGRES_PASSWORD=123456
+      - POSTGRES_USER=root
+  consumer:
+    build: ../consumer
+    depends_on:
+      - zookeeper
+      - kafka1
+      - db
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: ${POSTGRES_USER}
+      PGDATABASE: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    volumes:
+      - ../consumer:/consumer
+      - /consumer/node_modules
+    restart: always
+  proxyserver:
+    image: nginx
+    volumes:
+    - ../proxyserver/nginx.conf:/etc/nginx/nginx.conf
+    ports:
+    - "8080:80"
+    restart: always
+    # environment:
+    # - NGINX_HOST=foobar.com
+    # - NGINX_PORT=80
+volumes:
+  zookeeper-data:
+    driver: local
+  zookeeper-log:
+    driver: local
+  kafka-data:
+    driver: local

@@ -1,0 +1,51 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+model User {
+  id Int @id  @default(autoincrement())
+  username String @unique
+  password String
+  role String
+  token Token[]
+  user_permission UserPermissions[]
+}
+
+model Token {
+  id Int @id  @default(autoincrement())
+  access String @unique
+  accessExp DateTime 
+  user User @relation(fields: [userId], references: [id])
+  userId Int 
+  refresh String @unique
+  refreshExp DateTime 
+  deleted Boolean
+}
+
+model Tolowercase {
+  id Int @id @default(autoincrement())
+  name String
+}
+
+model Permissions {
+  id Int @id @default(autoincrement())
+  per_name String
+  user_permission UserPermissions[]
+}
+
+model UserPermissions {
+  id Int @id @default(autoincrement())
+  user User @relation(fields: [userId], references: [id])
+  userId Int 
+  permission Permissions @relation(fields: [permission_id], references: [id])
+  permission_id Int
+  create Boolean
+  read Boolean
+  update Boolean
+  delete Boolean
+}
